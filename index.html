@@ -1,25 +1,337 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Calculadora Renda Fixa - Economigo</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Calculadora de Renda Fixa — Canal Economigo</title>
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#0d6efd">
+  <meta name="theme-color" content="#065f46">
   <link rel="icon" href="icons/icon-192.png">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root{
+      --green:#16a34a;
+      --green-dark:#065f46;
+      --green-soft:#f0fdf4;
+      --blue:#2563eb;
+      --ink:#065f46;
+      --card:#ffffff;
+      --shadow:0 8px 24px rgba(0,0,0,.08);
+      --radius:16px;
+    }
+    *{box-sizing:border-box}
+    body{font-family:Arial,system-ui,Segoe UI,Roboto,sans-serif;background:var(--green-soft);color:var(--ink);padding:24px;margin:0}
+    h1{margin:0 0 12px;color:#047857;font-weight:800;font-size:clamp(22px,2.6vw,32px);text-align:center}
+    .subtitle{margin:0 auto 18px;max-width:900px;text-align:center;opacity:.85}
+    .layout{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:360px 1fr;gap:16px}
+    .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
+    .stack{display:flex;flex-direction:column;gap:10px}
+    label{font-size:.92rem;font-weight:700}
+    input,select{padding:10px 12px;border:1px solid #e5e7eb;border-radius:12px;width:100%;outline:none}
+    input:focus,select:focus{border-color:var(--green)}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .btn{background:#047857;color:#fff;border:none;padding:12px 14px;border-radius:12px;cursor:pointer;font-weight:700}
+    .btn:hover{background:var(--green-dark)}
+    .badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;justify-content:center}
+    .badge{background:#ecfdf5;color:#065f46;border:1px solid #d1fae5;border-radius:999px;padding:6px 10px;font-size:.8rem}
+    #grafico{width:100%;height:380px}
+    .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px}
+    .kpi{background:#ffffff;border:1px solid #eef2f7;border-radius:14px;padding:12px}
+    .kpi h4{margin:0 0 4px;font-size:.92rem}
+    .kpi .val{font-weight:800;font-size:1.1rem}
+    .kpi small{opacity:.7}
+    .muted{opacity:.9}
+    .links{display:flex;gap:8px;justify-content:center;margin-top:8px}
+    .linkbtn{background:#fff;border:1px solid #e5e7eb;padding:10px 12px;border-radius:12px;cursor:pointer}
+    .footer{margin-top:14px;text-align:center;font-size:.95rem}
+    .hr{height:1px;background:#eef2f7;margin:10px 0}
+    .help{font-size:.85rem;opacity:.8}
+    .tiny{font-size:.8rem;opacity:.75}
+    @media (max-width: 900px){ .layout{grid-template-columns:1fr} }
+  </style>
 </head>
 <body>
-  <h1>Calculadora Renda Fixa - Economigo</h1>
-  <p>Versão simplificada PWA pronta para instalar.</p>
+  <h1>💹 Calculadora de Renda Fixa — Canal Economigo</h1>
+  <p class="subtitle">
+    Compare CDB (Prefixado, Pós e Híbrido), LCI/LCA (Prefixada, Pós e Híbrida) e Poupança — já com IR único de <b>17,5%</b> quando aplicável.
+  </p>
+
+  <div class="badges" id="cotacoes">
+    <span class="badge">Carregando cotações...</span>
+  </div>
+
+  <div class="layout">
+    <!-- CONTROLES -->
+    <div class="card">
+      <div class="stack">
+        <div>
+          <label>Valor do investimento (R$)</label>
+          <input type="number" id="valor" value="10000" min="10" step="10">
+        </div>
+        <div class="row">
+          <div>
+            <label>Prazo (meses)</label>
+            <input type="number" id="meses" value="24" min="1" step="1">
+          </div>
+          <div>
+            <label>Reinvestir cupons? <span class="tiny">(não usado nesta versão)</span></label>
+            <select id="reinvestir">
+              <option value="sim" selected>Sim (compõe)</option>
+              <option value="nao">Não (somar à parte)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+        <div>
+          <label>Parâmetros (ajuste se quiser)</label>
+          <div class="row">
+            <div>
+              <small class="help">Prefixados (anual, % a.a.)</small>
+              <input type="number" id="tx_prefixada_aa" value="10" step="0.1">
+            </div>
+            <div>
+              <small class="help">Pós-fixados (% do CDI/Selic)</small>
+              <input type="number" id="tx_pos_cdi" value="100" step="1">
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <small class="help">Híbridos (spread fixo, % a.a.)</small>
+              <input type="number" id="tx_hibrida_spread_aa" value="5" step="0.1">
+            </div>
+            <div>
+              <small class="help">Poupança (automática pela regra vigente)</small>
+              <input type="text" value="Regra automática" disabled>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn" id="btnCalcular">Calcular e comparar</button>
+
+        <small class="help">
+          Fontes: BCB (Selic e IPCA) e AwesomeAPI (Dólar). Em caso de erro, usamos valores de fallback.
+        </small>
+      </div>
+    </div>
+
+    <!-- GRÁFICO + RESULTADOS -->
+    <div class="card">
+      <canvas id="grafico"></canvas>
+      <div class="kpis" id="cardsResultados"></div>
+
+      <div class="links">
+        <button class="linkbtn" onclick="window.open('https://www.youtube.com/@canaleconomigo','_blank')">▶️ YouTube</button>
+        <button class="linkbtn" onclick="window.open('https://www.instagram.com/canaleconomigo','_blank')">📸 Instagram</button>
+      </div>
+      <p class="footer">✅ Obrigado por usar a Calculadora de Renda Fixa — <b>Canal Economigo</b> agradece! 💰</p>
+    </div>
+  </div>
 
   <script>
+    // ===== PWA: Registrar Service Worker =====
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
-        navigator.serviceWorker.register("./service-worker.js")
-          .then(reg => console.log("SW registrado:", reg.scope))
-          .catch(err => console.error("Erro no SW:", err));
+        navigator.serviceWorker.register("./service-worker.js").catch(console.error);
       });
     }
+
+    let chart;
+    const IR = 0.175; // 17,5% — aplicável a CDB (LCI/LCA isentos)
+    const COLORS = {
+      poupanca:'#2563eb',
+      cdb_prefixado:'#16a34a',
+      cdb_pos:'#10b981',
+      cdb_hibrido:'#0ea5e9',
+      lci_prefixada:'#f59e0b',
+      lci_pos:'#ef4444',
+      lci_hibrida:'#8b5cf6'
+    };
+
+    async function buscarDados() {
+      try {
+        // USD/BRL via AwesomeAPI
+        const usdResp = await fetch("https://economia.awesomeapi.com.br/last/USD-BRL");
+        const usdJson = await usdResp.json();
+        const dolar = parseFloat(usdJson?.USDBRL?.bid);
+
+        // Selic a.a. (%) via BCB/SGS série 432
+        const selicResp = await fetch("https://api.bcb.gov.br/dados/serie/bcdata.sgs.432/dados/ultimos/1?formato=json");
+        const selicJson = await selicResp.json();
+        const selic = parseFloat(selicJson[0].valor); // a.a. %
+
+        // IPCA mensal (%) via BCB/SGS série 433
+        const ipcaResp = await fetch("https://api.bcb.gov.br/dados/serie/bcdata.sgs.433/dados/ultimos/1?formato=json");
+        const ipcaJson = await ipcaResp.json();
+        const ipca_mensal_pct = parseFloat(ipcaJson[0].valor); // % no mês
+
+        document.getElementById("cotacoes").innerHTML =
+          `<span class="badge">💵 Dólar: R$ ${isFinite(dolar)?dolar.toFixed(2):"—"}</span>
+           <span class="badge">📊 Selic: ${isFinite(selic)?selic.toFixed(2):"—"}% a.a.</span>
+           <span class="badge">📉 IPCA (mês): ${isFinite(ipca_mensal_pct)?ipca_mensal_pct.toFixed(2):"—"}%</span>`;
+
+        return { selic_aa: isFinite(selic)?selic:12, ipca_mensal_pct: isFinite(ipca_mensal_pct)?ipca_mensal_pct:0.30 };
+      } catch (e) {
+        document.getElementById("cotacoes").innerHTML =
+          `<span class="badge">💵 Dólar: —</span>
+           <span class="badge">📊 Selic (fallback): 12,00% a.a.</span>
+           <span class="badge">📉 IPCA (mês) (fallback): 0,30%</span>`;
+        return { selic_aa: 12, ipca_mensal_pct: 0.30 };
+      }
+    }
+
+    // Conversões auxiliares
+    const toMonthlyFromAA = (aa) => (aa/100)/12; // aproximado
+    const compose = (val, r) => val * (1 + r);
+
+    // Regras de IR
+    const temIR = (key) => key.startsWith('cdb'); // somente CDB tributa nesta versão
+
+    // Poupança (regra atual simplificada)
+    function taxaPoupancaMensal(selic_aa){
+      if (selic_aa > 8.5) return 0.005; // 0,5% a.m. + TR(~0)
+      return ((selic_aa*0.70)/100)/12;
+    }
+
+    // Simulação mês a mês
+    function simularTodos({valorInicial, meses, params, dados}){
+      const { selic_aa, ipca_mensal_pct } = dados;
+      const selic_mensal = toMonthlyFromAA(selic_aa);
+      const cdi_mensal = selic_mensal * (params.tx_pos_cdi/100);
+      const ipca_mensal = ipca_mensal_pct/100;
+
+      const taxa_prefixada_mensal = toMonthlyFromAA(params.tx_prefixada_aa);
+      const taxa_hibrida_spread_mensal = toMonthlyFromAA(params.tx_hibrida_spread_aa);
+
+      const getRate = {
+        cdb_prefixado: () => taxa_prefixada_mensal,
+        cdb_pos: () => cdi_mensal,
+        cdb_hibrido: () => taxa_hibrida_spread_mensal + ipca_mensal,
+        lci_prefixada: () => taxa_prefixada_mensal,
+        lci_pos: () => cdi_mensal,
+        lci_hibrida: () => taxa_hibrida_spread_mensal + ipca_mensal,
+        poupanca: () => taxaPoupancaMensal(selic_aa)
+      };
+
+      const chaves = [
+        'cdb_prefixado','cdb_pos','cdb_hibrido',
+        'lci_prefixada','lci_pos','lci_hibrida',
+        'poupanca'
+      ];
+
+      const series = {};
+      const finais = {};
+
+      chaves.forEach(key => {
+        let valor = valorInicial;
+        const lista = [];
+        for (let m=1; m<=meses; m++){
+          const r = getRate[key]();
+          valor = compose(valor, r);
+
+          let valorAjustado = valor;
+          if (temIR(key)){
+            const ganhoBruto = valor - valorInicial;
+            const ir = Math.max(0, ganhoBruto) * IR;
+            valorAjustado = valorInicial + (ganhoBruto - ir);
+          }
+          lista.push(Number(valorAjustado.toFixed(2)));
+        }
+        series[key] = lista;
+        finais[key] = lista[lista.length-1];
+      });
+
+      return { series, finais };
+    }
+
+    function formatBRL(v){ return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}) }
+
+    function desenharGrafico(labels, series){
+      const ctx = document.getElementById("grafico").getContext("2d");
+      if (chart) chart.destroy();
+
+      const datasets = Object.keys(series).map(key => ({
+        label: legenda(key),
+        data: series[key],
+        borderColor: COLORS[key],
+        fill: false,
+        tension: .2
+      }));
+
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets },
+        options: {
+          responsive:true,
+          maintainAspectRatio:false,
+          plugins:{
+            legend:{ position:'bottom' },
+            tooltip:{ mode:'index', intersect:false }
+          },
+          interaction:{ mode:'nearest', intersect:false },
+          scales:{
+            x:{ title:{display:true,text:'Meses'} },
+            y:{ title:{display:true,text:'Valor acumulado (R$)'} }
+          }
+        }
+      });
+    }
+
+    function legenda(key){
+      return {
+        cdb_prefixado:'CDB Prefixado',
+        cdb_pos:'CDB Pós (CDI)',
+        cdb_hibrido:'CDB Híbrido (IPCA+)',
+        lci_prefixada:'LCI/LCA Prefixada',
+        lci_pos:'LCI/LCA Pós (CDI)',
+        lci_hibrida:'LCI/LCA Híbrida',
+        poupanca:'Poupança'
+      }[key] || key;
+    }
+
+    function montarCards(finais, valorInicial){
+      const cont = document.getElementById('cardsResultados');
+      cont.innerHTML = '';
+      const ordem = [
+        'cdb_prefixado','cdb_pos','cdb_hibrido',
+        'lci_prefixada','lci_pos','lci_hibrida',
+        'poupanca'
+      ];
+      ordem.forEach(key=>{
+        const bruto = finais[key];
+        const lucro = bruto - valorInicial;
+        const el = document.createElement('div');
+        el.className='kpi';
+        el.innerHTML = `
+          <h4>${legenda(key)}</h4>
+          <div class="val">${formatBRL(bruto)}</div>
+          <small class="muted">Lucro líquido: <b>${formatBRL(lucro)}</b></small>
+        `;
+        cont.appendChild(el);
+      });
+    }
+
+    async function calcular(){
+      const valor = parseFloat(document.getElementById('valor').value||0);
+      const meses = parseInt(document.getElementById('meses').value||1);
+
+      const params = {
+        tx_prefixada_aa: parseFloat(document.getElementById('tx_prefixada_aa').value||0),
+        tx_pos_cdi: parseFloat(document.getElementById('tx_pos_cdi').value||100),
+        tx_hibrida_spread_aa: parseFloat(document.getElementById('tx_hibrida_spread_aa').value||0)
+      };
+
+      const dados = await buscarDados();
+      const { series, finais } = simularTodos({valorInicial:valor, meses, params, dados});
+
+      const labels = Array.from({length: meses}, (_,i)=> i+1);
+      desenharGrafico(labels, series);
+      montarCards(finais, valor);
+    }
+
+    document.getElementById('btnCalcular').addEventListener('click', calcular);
+    // Primeira execução
+    calcular();
   </script>
 </body>
 </html>

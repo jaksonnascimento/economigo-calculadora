@@ -3,7 +3,8 @@ const ASSETS = [
   "./index.html",
   "./manifest.json",
   "./icons/icon-192.png",
-  "./icons/icon-512.png"
+  "./icons/icon-512.png",
+  "https://cdn.jsdelivr.net/npm/chart.js"
 ];
 
 self.addEventListener("install", (event) => {
