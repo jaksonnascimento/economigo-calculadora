@@ -1,7 +1,7 @@
 {
   "name": "Calculadora Renda Fixa - Economigo",
   "short_name": "Economigo",
-  "start_url": "./calculadora_renda_fixa_economigo_v4.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#0d6efd",

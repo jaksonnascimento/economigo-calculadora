@@ -1,6 +1,6 @@
 const CACHE = "economigo-cache-v1";
 const ASSETS = [
-  "./calculadora_renda_fixa_economigo_v4.html",
+  "./index.html",
   "./manifest.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png"
